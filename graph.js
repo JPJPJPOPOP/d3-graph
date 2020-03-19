@@ -8,7 +8,8 @@ let graph = {
   links: []
 };
 
-let selected = [];
+let connecting = [];
+let selected = null;
 
 let svg = d3
   .select("body")
@@ -16,6 +17,35 @@ let svg = d3
   .attr("width", 1000)
   .attr("height", 800);
 svg.style("background", "white");
+
+svg.on("click", function() {
+  if (selected != null) {
+    d3.select(selected[1]).style("stroke", "black");
+  }
+  selected = null;
+});
+
+$(window).keydown(function(e) {
+  console.log(e);
+  if (e != null && e.keyCode == 8) {
+    e.preventDefault();
+    if (selected != null) {
+      console.log("deleted", selected);
+      console.log(selected[0].source);
+      graph.links.forEach((l, i) => {
+        console.log(l.source);
+        console.log(selected[0].source);
+        if (l.source.is(selected[0].source)) {
+          console.log("found");
+          graph.links.splice(i, 1);
+          console.log(selected);
+          d3.select(selected[1]).remove();
+        }
+      });
+      selected = null;
+    }
+  }
+});
 
 let markerDef = svg.append("defs");
 markerDef
@@ -34,7 +64,7 @@ markerDef
   .append("path")
   .attr("d", "M 1 1 L 3 2 L 1 3 Z");
 
-function run(graph) {
+function createNodes() {
   var nodes = svg
     .selectAll("rect")
     .data(graph.nodes)
@@ -42,18 +72,18 @@ function run(graph) {
     .append("rect")
     .attr("class", "cell")
     .on("click", function(d) {
-      if (selected.length > 0) {
-        if (selected[0] == this) {
-          selected = [];
+      if (connecting.length > 0) {
+        if (connecting[0] == this) {
+          connecting = [];
           return;
         }
-        console.log(selected[0]);
-        graph.links.push({ source: selected[0], target: this });
-        selected = [];
+        console.log(connecting[0]);
+        graph.links.push({ source: $(connecting[0]), target: $(this) });
+        addConnection($(connecting[0]), $(this));
+        connecting = [];
         console.log(graph);
-        run(graph);
       } else {
-        selected.push(this);
+        connecting.push(this);
       }
       console.log(d);
     });
@@ -64,13 +94,7 @@ function run(graph) {
     })
     .attr("y", 500);
 
-  let lineFunction = d3
-    .line()
-    .x(d => d.x)
-    .y(d => d.y)
-    .curve(d3.curveCardinal.tension(-3));
-
-  var link = svg
+  /*var link = svg
     .selectAll("line")
     .data(graph.links)
     .enter()
@@ -78,24 +102,58 @@ function run(graph) {
     .style("stroke", "black")
     .style("stroke-width", "4px")
     .style("fill", "none")
-    .attr("d", function(d) {
-      let xpos1 = parseInt(d.source.getAttribute("x")) + 50;
-      let ypos1 = parseInt(d.source.getAttribute("y"));
-      let xpos2 = parseInt(d.target.getAttribute("x")) + 50;
-      let ypos2 = parseInt(d.target.getAttribute("y"));
-      let points = [
-        { x: xpos1, y: ypos1 },
-        {
-          x: (xpos1 + xpos2) / 2,
-          y: ypos1 - Math.abs(xpos1 - xpos2) / 2
-        },
-        { x: xpos2, y: ypos2 }
-      ];
-      console.log(points);
-      console.log(lineFunction(points));
-      return lineFunction(points);
-    })
-    .attr("marker-end", "url(#right)");
+    .attr("d", calculatePath)
+    .attr("marker-end", "url(#right)")
+    .on("contextmenu", function(d) {
+      d3.event.preventDefault();
+      console.log("rightclick");
+      if (selected != null) {
+        d3.select(selected[1]).style("stroke", "black");
+      }
+      selected = [d, this];
+      d3.select(this).style("stroke", "blue");
+    });*/
 }
 
-run(graph);
+let lineFunction = d3
+  .line()
+  .x(d => d.x)
+  .y(d => d.y)
+  .curve(d3.curveCardinal.tension(-3));
+
+function calculatePath(d) {
+  let xpos1 = parseInt(d.source.attr("x")) + 50;
+  let ypos1 = parseInt(d.source.attr("y"));
+  let xpos2 = parseInt(d.target.attr("x")) + 50;
+  let ypos2 = parseInt(d.target.attr("y"));
+  let points = [
+    { x: xpos1, y: ypos1 },
+    {
+      x: (xpos1 + xpos2) / 2,
+      y: ypos1 - Math.abs(xpos1 - xpos2) / 2
+    },
+    { x: xpos2, y: ypos2 }
+  ];
+  return lineFunction(points);
+}
+
+function addConnection(source, target) {
+  svg
+    .append("path")
+    .style("stroke", "black")
+    .style("stroke-width", "4px")
+    .style("fill", "none")
+    .attr("d", calculatePath({ source: source, target: target }))
+    .attr("marker-end", "url(#right)")
+    .on("contextmenu", function() {
+      d3.event.preventDefault();
+      console.log("rightclick");
+      if (selected != null) {
+        d3.select(selected[1]).style("stroke", "black");
+      }
+      selected = [{ source: source, target: target }, this];
+      d3.select(this).style("stroke", "blue");
+    });
+}
+
+createNodes();
