@@ -10,6 +10,7 @@ let graph = {
 
 let connecting = null;
 let selected = null;
+let clicked = null;
 
 let svg = d3
   .select("body")
@@ -19,10 +20,15 @@ let svg = d3
 svg.style("background", "white");
 
 svg.on("click", function() {
-  if (selected != null) {
+  if (clicked != "deprel" && selected != null) {
     d3.select(selected[1]).style("stroke", "#BEBEBE");
+    selected = null;
   }
-  selected = null;
+  if (clicked != "token" && connecting != null) {
+    d3.select(connecting).style("fill", "#7FA1FF");
+    connecting = null;
+  }
+  clicked = null;
 });
 
 $(window).keydown(function(e) {
@@ -53,7 +59,7 @@ $(window).keydown(function(e) {
 let markerDef = svg.append("defs");
 markerDef
   .append("marker")
-  .attr("id", "right")
+  .attr("id", "end")
   .attr("viewBox", "0 -5 10 10")
   .attr("refX", "2")
   .attr("refY", "2")
@@ -79,6 +85,7 @@ function createNodes() {
     .style("stroke-width", "1px")
     .on("click", function(d) {
       if (connecting != null) {
+        d3.select(connecting).style("fill", "#7FA1FF");
         if (connecting == this) {
           connecting = null;
           return;
@@ -90,8 +97,13 @@ function createNodes() {
         console.log(graph);
       } else {
         connecting = this;
+        d3.select(this).style("fill", "#2653C9");
+        console.log(this);
+        console.log(d3.select(this));
       }
       console.log(d);
+      clicked = "token";
+      //d3.event.stopPropagation();
     });
   let spacing = 1;
   var nodesAttr = nodes
@@ -157,7 +169,7 @@ function addConnection(source, target) {
     .style("stroke-width", "6px")
     .style("fill", "none")
     .attr("d", calculatePath({ source: source, target: target }))
-    .attr("marker-end", "url(#right)")
+    .attr("marker-end", "url(#end)")
     .on("contextmenu", function() {
       d3.event.preventDefault();
       console.log("rightclick");
@@ -166,6 +178,8 @@ function addConnection(source, target) {
       }
       selected = [{ source: source, target: target }, this];
       d3.select(this).style("stroke", "#D856FC");
+      clicked = "deprel";
+      svg.on("click")();
     });
 }
 
