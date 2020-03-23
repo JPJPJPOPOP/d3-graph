@@ -20,7 +20,7 @@ let svg = d3
   .attr("height", 800)
   .style("background", "white")
   .style("font-family", "Arial")
-  .style("font-size", "20");
+  .style("font-size", "15");
 
 // Detect clicks on svg
 svg.on("click", function() {
@@ -155,8 +155,8 @@ function calculateMid(d) {
   let xpos1 = parseInt(d.source.attr("x")) + 50;
   let ypos1 = parseInt(d.source.attr("y"));
   let xpos2 = parseInt(d.target.attr("x")) + 50;
-  let dist = xpos1 - xpos2;
-  let initialOffset = xpos1 - Math.sign(dist) * 20;
+  let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
+  let dist = initialOffset - xpos2;
   let height = ypos1 - Math.abs(dist) / 2;
   return [(initialOffset + xpos2) / 2, height];
 }
@@ -169,41 +169,79 @@ function calculateDirection(d) {
   return Math.sign(dist);
 }
 
+function calculateLeftCurve(d, rectWidth, rectHeight) {
+  let xpos1 = parseInt(d.source.attr("x")) + 50;
+  let ypos1 = parseInt(d.source.attr("y"));
+  let xpos2 = parseInt(d.target.attr("x")) + 50;
+  let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
+  let dist = initialOffset - xpos2;
+  let height = ypos1 - Math.abs(dist) / 2;
+  let rectLeft = (initialOffset + xpos2) / 2 - rectWidth / 2;
+  let endpointx = Math.min(rectLeft, initialOffset + Math.abs(dist) / 4);
+  return (
+    "M " +
+    initialOffset +
+    " " +
+    ypos1 +
+    " Q " +
+    initialOffset +
+    " " +
+    (height + Math.abs(ypos1 - height) / 4) +
+    " " +
+    endpointx +
+    " " +
+    height +
+    " L " +
+    rectLeft +
+    " " +
+    height
+  );
+}
+
+function calculateRightCurve(d, rectWidth, rectHeight) {
+  let xpos1 = parseInt(d.source.attr("x")) + 50;
+  let ypos1 = parseInt(d.source.attr("y"));
+  let xpos2 = parseInt(d.target.attr("x")) + 50;
+  let ypos2 = parseInt(d.target.attr("y"));
+  let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
+  let dist = initialOffset - xpos2;
+  let height = ypos1 - Math.abs(dist) / 2;
+  let rectRight = (initialOffset + xpos2) / 2 + rectWidth / 2;
+  let endpointx = Math.max(rectRight, xpos2 - Math.abs(dist) / 4);
+  return (
+    "M " +
+    rectRight +
+    " " +
+    height +
+    " L " +
+    endpointx +
+    " " +
+    height +
+    " Q " +
+    xpos2 +
+    " " +
+    (height + Math.abs(ypos1 - height) / 4) +
+    " " +
+    xpos2 +
+    " " +
+    (ypos2 - 11)
+  );
+}
+
 // Add deprel to svg
 function addConnection(source, target, id) {
-  let mid, dir;
-  svg
-    .append("path")
-    .style("stroke", "#BEBEBE")
-    .style("stroke-width", "6px")
-    .style("fill", "none")
-    .attr("d", function() {
-      let d = { source: source, target: target };
-      mid = calculateMid(d);
-      dir = calculateDirection(d);
-      return calculatePath(d);
-    })
-    .attr("marker-end", "url(#end)")
-    .attr("id", id)
-    .on("contextmenu", function() {
-      d3.event.preventDefault();
-      console.log("rightclick");
-      if (selected != null) {
-        d3.select(selected[1]).style("stroke", "#BEBEBE");
-      }
-      selected = [{ source: source, target: target }, this, id];
-      d3.select(this).style("stroke", "#D856FC");
-      clicked = "deprel";
-      svg.on("click")();
-    });
+  let d = { source: source, target: target };
+  let mid = calculateMid(d);
+  let dir = calculateDirection(d);
 
   // Add text just to calculate its dimensions
-  let text = "npos"; // Hardcoded
+  let text = "nummod"; // Hardcoded
   if (dir < 0) {
     text += "⊳";
   } else {
     text = "⊲" + text;
   }
+
   svg
     .append("text")
     .attr("id", "text" + id)
@@ -212,9 +250,38 @@ function addConnection(source, target, id) {
     .text(text);
 
   let txt = $("#text" + id)[0];
-  let rectWidth = txt.getBBox().width;
+  let rectWidth = txt.getBBox().width + 10;
   let rectHeight = txt.getBBox().height;
   d3.select("#text" + id).remove(); // delete text after calculation
+
+  svg
+    .append("path")
+    .style("stroke", "#BEBEBE")
+    .style("stroke-width", "6px")
+    .style("fill", "none")
+    .attr("d", calculateLeftCurve(d, rectWidth, rectHeight))
+    //.attr("d", calculatePath(d))
+    //.attr("marker-end", "url(#end)")
+    .attr("id", id)
+    .on("contextmenu", function() {
+      /*d3.event.preventDefault();
+      console.log("rightclick");
+      if (selected != null) {
+        d3.select(selected[1]).style("stroke", "#BEBEBE");
+      }
+      selected = [{ source: source, target: target }, this, id];
+      d3.select(this).style("stroke", "#D856FC");
+      clicked = "deprel";
+      svg.on("click")();*/
+    });
+
+  svg
+    .append("path")
+    .style("stroke", "#BEBEBE")
+    .style("stroke-width", "6px")
+    .style("fill", "none")
+    .attr("marker-end", "url(#end)")
+    .attr("d", calculateRightCurve(d, rectWidth, rectHeight));
 
   svg
     .append("g")
@@ -229,17 +296,18 @@ function addConnection(source, target, id) {
     );
   let input = d3.select("#input" + id);
 
-  input
+  /*input
     .append("rect")
     .attr("width", rectWidth)
     .attr("height", rectHeight)
     .attr("fill", "white")
     .attr("stroke", "black")
-    .attr("stroke-width", "1");
+    .attr("stroke-width", "1");*/
 
   input
     .append("text")
     .attr("id", "text" + id)
+    .attr("x", 8)
     .attr("y", rectHeight / 2 + 2)
     .text(text);
 }
