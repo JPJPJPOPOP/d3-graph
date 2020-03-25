@@ -24,13 +24,17 @@ let svg = d3
 
 // Detect clicks on svg
 svg.on("click", function() {
+  console.log("svg detect click " + clicked);
   if (clicked != "deprel" && selected != null) {
     d3.select(selected[1]).style("stroke", "#BEBEBE");
     selected = null;
   }
   if (clicked != "token" && connecting != null) {
-    d3.select(connecting).style("fill", "#7FA1FF");
+    d3.select(connecting[0]).style("fill", "#7FA1FF");
     connecting = null;
+  }
+  if (clicked != "label") {
+    $("#edit").css("visibility", "hidden");
   }
   clicked = null;
 });
@@ -100,7 +104,12 @@ function createNodes() {
         }
         console.log(connecting);
         graph.links.push({ source: $(connecting[0]), target: $(this) });
-        addConnection($(connecting[0]), $(this), connecting[1] + "-" + d.id);
+        addConnection(
+          $(connecting[0]),
+          $(this),
+          connecting[1] + "-" + d.id,
+          ""
+        );
         connecting = null;
         console.log(graph);
       } else {
@@ -229,13 +238,13 @@ function calculateRightCurve(d, rectWidth, rectHeight) {
 }
 
 // Add deprel to svg
-function addConnection(source, target, id) {
+function addConnection(source, target, id, t) {
   let d = { source: source, target: target };
   let mid = calculateMid(d);
   let dir = calculateDirection(d);
 
   // Add text just to calculate its dimensions
-  let text = "nummod"; // Hardcoded
+  let text = "nummod" + t; // Hardcoded
   if (dir < 0) {
     text += "⊳";
   } else {
@@ -309,7 +318,20 @@ function addConnection(source, target, id) {
     .attr("id", "text" + id)
     .attr("x", 8)
     .attr("y", rectHeight / 2 + 2)
-    .text(text);
+    .style("cursor", "pointer")
+    .text(text)
+    .on("click", function(d) {
+      clicked = "label";
+      console.log(mid);
+      console.log(rectWidth);
+      console.log(rectHeight);
+      $("#edit")
+        .val("")
+        .css("visibility", "visible")
+        .focus()
+        .css("left", mid[0] - 40)
+        .css("top", mid[1] - 25 + rectHeight / 2);
+    });
 }
 
 createNodes();
