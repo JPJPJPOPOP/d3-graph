@@ -26,11 +26,11 @@ let svg = d3
 svg.on("click", function() {
   console.log("svg detect click " + clicked);
   if (clicked != "deprel" && selected != null) {
-    d3.select(selected[1]).style("stroke", "#BEBEBE");
+    d3.selectAll(".deprel" + selected).style("stroke", "#BEBEBE");
     selected = null;
   }
   if (clicked != "token" && connecting != null) {
-    d3.select(connecting[0]).style("fill", "#7FA1FF");
+    d3.select("#token" + connecting).style("fill", "#7FA1FF");
     connecting = null;
   }
   if (clicked != "label") {
@@ -43,22 +43,16 @@ $(window).keydown(function(e) {
   console.log(e);
   // Detect delete for deleting deprels
   if (e != null && e.keyCode == 8) {
-    e.preventDefault();
     if (selected != null) {
+      e.preventDefault();
       console.log("deleted", selected);
-      console.log(selected[0].source);
+      let s = selected.split("-");
       graph.links.forEach((l, i) => {
-        console.log(l.source);
-        console.log(selected[0].source);
-        if (
-          l.source.is(selected[0].source) &&
-          l.target.is(selected[0].target)
-        ) {
+        console.log(l.source, l.target);
+        if (l.source == s[0] && l.target == s[1]) {
           console.log("found");
           graph.links.splice(i, 1);
-          console.log(selected);
-          d3.select(selected[1]).remove();
-          d3.select("#input" + selected[2]).remove();
+          d3.select("#group" + selected).remove();
         }
       });
       selected = null;
@@ -92,28 +86,31 @@ function createNodes() {
     .attr("class", "cell")
     .attr("rx", 10)
     .attr("ry", 10)
+    .attr("id", function(d) {
+      return "token" + d.id;
+    })
     .style("fill", "#7FA1FF")
     .style("stroke", "black")
     .style("stroke-width", "1px")
     .on("click", function(d) {
       if (connecting != null) {
-        d3.select(connecting[0]).style("fill", "#7FA1FF");
-        if (connecting[0] == this) {
+        d3.select("#token" + connecting).style("fill", "#7FA1FF");
+        if (connecting == d.id) {
           connecting = null;
           return;
         }
         console.log(connecting);
-        graph.links.push({ source: $(connecting[0]), target: $(this) });
+        graph.links.push({ source: connecting, target: d.id });
         addConnection(
-          $(connecting[0]),
+          $("#token" + connecting),
           $(this),
-          connecting[1] + "-" + d.id,
+          connecting + "-" + d.id,
           ""
         );
         connecting = null;
         console.log(graph);
       } else {
-        connecting = [this, d.id];
+        connecting = d.id;
         d3.select(this).style("fill", "#2653C9");
         console.log(this);
         console.log(d3.select(this));
@@ -243,58 +240,60 @@ function addConnection(source, target, id, t) {
   let mid = calculateMid(d);
   let dir = calculateDirection(d);
 
-  // Add text just to calculate its dimensions
-  let text = "nummod" + t; // Hardcoded
+  // Add text first to calculate its dimensions
+  let text = t;
   if (dir < 0) {
     text += "⊳";
   } else {
     text = "⊲" + text;
   }
 
-  svg
+  let pathGroup = svg.append("g").attr("id", "group" + id);
+
+  let textElement = pathGroup
     .append("text")
     .attr("id", "text" + id)
-    .attr("x", -100)
-    .attr("y", -100)
     .text(text);
 
   let txt = $("#text" + id)[0];
   let rectWidth = txt.getBBox().width + 10;
   let rectHeight = txt.getBBox().height;
-  d3.select("#text" + id).remove(); // delete text after calculation
 
-  svg
+  function handleDeprelSelect() {
+    d3.event.preventDefault();
+    console.log("rightclick");
+    if (selected != null) {
+      d3.selectAll(".deprel" + selected).style("stroke", "#BEBEBE");
+    }
+    selected = id;
+    d3.selectAll(".deprel" + selected).style("stroke", "#D856FC");
+    clicked = "deprel";
+    svg.on("click")();
+  }
+
+  pathGroup
     .append("path")
     .style("stroke", "#BEBEBE")
     .style("stroke-width", "6px")
     .style("fill", "none")
     .attr("d", calculateLeftCurve(d, rectWidth, rectHeight))
-    //.attr("d", calculatePath(d))
-    //.attr("marker-end", "url(#end)")
-    .attr("id", id)
-    .on("contextmenu", function() {
-      /*d3.event.preventDefault();
-      console.log("rightclick");
-      if (selected != null) {
-        d3.select(selected[1]).style("stroke", "#BEBEBE");
-      }
-      selected = [{ source: source, target: target }, this, id];
-      d3.select(this).style("stroke", "#D856FC");
-      clicked = "deprel";
-      svg.on("click")();*/
-    });
+    .attr("class", "deprel" + id)
+    .on("contextmenu", handleDeprelSelect);
 
-  svg
+  pathGroup
     .append("path")
     .style("stroke", "#BEBEBE")
     .style("stroke-width", "6px")
     .style("fill", "none")
     .attr("marker-end", "url(#end)")
-    .attr("d", calculateRightCurve(d, rectWidth, rectHeight));
+    .attr("d", calculateRightCurve(d, rectWidth, rectHeight))
+    .attr("class", "deprel" + id)
+    .on("contextmenu", handleDeprelSelect);
 
-  svg
-    .append("g")
-    .attr("id", "input" + id)
+  textElement
+    .attr("x", 8)
+    .attr("y", rectHeight / 2 + 4)
+    .style("cursor", "pointer")
     .attr(
       "transform",
       "translate(" +
@@ -302,24 +301,7 @@ function addConnection(source, target, id, t) {
         "," +
         (mid[1] - rectHeight / 2) +
         ")"
-    );
-  let input = d3.select("#input" + id);
-
-  /*input
-    .append("rect")
-    .attr("width", rectWidth)
-    .attr("height", rectHeight)
-    .attr("fill", "white")
-    .attr("stroke", "black")
-    .attr("stroke-width", "1");*/
-
-  input
-    .append("text")
-    .attr("id", "text" + id)
-    .attr("x", 8)
-    .attr("y", rectHeight / 2 + 2)
-    .style("cursor", "pointer")
-    .text(text)
+    )
     .on("click", function(d) {
       clicked = "label";
       console.log(mid);
@@ -330,7 +312,15 @@ function addConnection(source, target, id, t) {
         .css("visibility", "visible")
         .focus()
         .css("left", mid[0] - 40)
-        .css("top", mid[1] - 25 + rectHeight / 2);
+        .css("top", mid[1] - 25 + rectHeight / 2)
+        .off("change") //remove previous change handler
+        .on("change", function() {
+          $("#text" + id).text(this.value);
+          $("#edit")
+            .css("visibility", "hidden")
+            .blur();
+          console.log(id);
+        });
     });
 }
 
