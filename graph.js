@@ -46,19 +46,23 @@ $(window).keydown(function(e) {
     if (selected != null) {
       e.preventDefault();
       console.log("deleted", selected);
-      let s = selected.split("-");
-      graph.links.forEach((l, i) => {
-        console.log(l.source, l.target);
-        if (l.source == s[0] && l.target == s[1]) {
-          console.log("found");
-          graph.links.splice(i, 1);
-          d3.select("#group" + selected).remove();
-        }
-      });
+      deleteDeprel(selected);
       selected = null;
     }
   }
 });
+
+function deleteDeprel(id) {
+  let s = id.split("-");
+  graph.links.forEach((l, i) => {
+    console.log(l.source, l.target);
+    if (l.source == s[0] && l.target == s[1]) {
+      console.log("found");
+      graph.links.splice(i, 1);
+      d3.select("#group" + id).remove();
+    }
+  });
+}
 
 // Ending arrowhead
 let markerDef = svg.append("defs");
@@ -100,13 +104,7 @@ function createNodes() {
           return;
         }
         console.log(connecting);
-        graph.links.push({ source: connecting, target: d.id });
-        addConnection(
-          $("#token" + connecting),
-          $(this),
-          connecting + "-" + d.id,
-          ""
-        );
+        addConnection(connecting, d.id, connecting + "-" + d.id, "");
         connecting = null;
         console.log(graph);
       } else {
@@ -236,7 +234,8 @@ function calculateRightCurve(d, rectWidth, rectHeight) {
 
 // Add deprel to svg
 function addConnection(source, target, id, t) {
-  let d = { source: source, target: target };
+  let d = { source: $("#token" + source), target: $("#token" + target) };
+  graph.links.push({ source: source, target: target });
   let mid = calculateMid(d);
   let dir = calculateDirection(d);
 
@@ -264,6 +263,10 @@ function addConnection(source, target, id, t) {
     console.log("rightclick");
     if (selected != null) {
       d3.selectAll(".deprel" + selected).style("stroke", "#BEBEBE");
+    }
+    if (selected == id) {
+      selected = null;
+      return;
     }
     selected = id;
     d3.selectAll(".deprel" + selected).style("stroke", "#D856FC");
@@ -315,7 +318,8 @@ function addConnection(source, target, id, t) {
         .css("top", mid[1] - 25 + rectHeight / 2)
         .off("change") //remove previous change handler
         .on("change", function() {
-          $("#text" + id).text(this.value);
+          deleteDeprel(id);
+          addConnection(source, target, id, this.value);
           $("#edit")
             .css("visibility", "hidden")
             .blur();
