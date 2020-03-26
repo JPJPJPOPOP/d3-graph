@@ -20,7 +20,7 @@ let svg = d3
   .attr("height", 800)
   .style("background", "white")
   .style("font-family", "Arial")
-  .style("font-size", "15");
+  .style("font-size", "20");
 
 // Detect clicks on svg
 svg.on("click", function() {
@@ -125,35 +125,6 @@ function createNodes() {
     .attr("y", 500);
 }
 
-// Line function for determining path of deprel
-let lineFunction = d3
-  .line()
-  .x(d => d.x)
-  .y(d => d.y)
-  .curve(d3.curveCardinal.tension(-1.5));
-
-// Calculate points along the path
-function calculatePath(d) {
-  let xpos1 = parseInt(d.source.attr("x")) + 50;
-  let ypos1 = parseInt(d.source.attr("y"));
-  let xpos2 = parseInt(d.target.attr("x")) + 50;
-  let ypos2 = parseInt(d.target.attr("y"));
-  let dist = xpos1 - xpos2;
-  let initialOffset = xpos1 - Math.sign(dist) * 20;
-  let height = ypos1 - Math.abs(dist) / 2;
-  //let heightOffset = (20 * dist) / 150;
-  let endMarkerOffset = 11;
-  let points = [
-    { x: initialOffset, y: ypos1 },
-    {
-      x: (initialOffset + xpos2) / 2,
-      y: height
-    },
-    { x: xpos2, y: ypos2 - endMarkerOffset }
-  ];
-  return lineFunction(points);
-}
-
 // Calculate midpoint of point for text
 function calculateMid(d) {
   let xpos1 = parseInt(d.source.attr("x")) + 50;
@@ -173,7 +144,7 @@ function calculateDirection(d) {
   return Math.sign(dist);
 }
 
-function calculateLeftCurve(d, rectWidth, rectHeight) {
+function calculateLeftCurve(d, rectWidth) {
   let xpos1 = parseInt(d.source.attr("x")) + 50;
   let ypos1 = parseInt(d.source.attr("y"));
   let xpos2 = parseInt(d.target.attr("x")) + 50;
@@ -181,7 +152,10 @@ function calculateLeftCurve(d, rectWidth, rectHeight) {
   let dist = initialOffset - xpos2;
   let height = ypos1 - Math.abs(dist) / 2;
   let rectLeft = (initialOffset + xpos2) / 2 - rectWidth / 2;
-  let endpointx = Math.min(rectLeft, initialOffset + Math.abs(dist) / 4);
+
+  let curveDist = Math.abs(dist) / 4;
+  console.log(curveDist);
+  let endpointx = Math.min(rectLeft, initialOffset + curveDist);
   return (
     "M " +
     initialOffset +
@@ -202,7 +176,7 @@ function calculateLeftCurve(d, rectWidth, rectHeight) {
   );
 }
 
-function calculateRightCurve(d, rectWidth, rectHeight) {
+function calculateRightCurve(d, rectWidth) {
   let xpos1 = parseInt(d.source.attr("x")) + 50;
   let ypos1 = parseInt(d.source.attr("y"));
   let xpos2 = parseInt(d.target.attr("x")) + 50;
@@ -211,7 +185,8 @@ function calculateRightCurve(d, rectWidth, rectHeight) {
   let dist = initialOffset - xpos2;
   let height = ypos1 - Math.abs(dist) / 2;
   let rectRight = (initialOffset + xpos2) / 2 + rectWidth / 2;
-  let endpointx = Math.max(rectRight, xpos2 - Math.abs(dist) / 4);
+  let curveDist = Math.abs(dist) / 4;
+  let endpointx = Math.max(rectRight, xpos2 - curveDist);
   return (
     "M " +
     rectRight +
@@ -232,11 +207,39 @@ function calculateRightCurve(d, rectWidth, rectHeight) {
   );
 }
 
+function needShift(d, rectWidth) {
+  let xpos1 = parseInt(d.source.attr("x")) + 50;
+  let xpos2 = parseInt(d.target.attr("x")) + 50;
+  let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
+  let dist = initialOffset - xpos2;
+  let rectLeft = (initialOffset + xpos2) / 2 - rectWidth / 2;
+  if (rectLeft < initialOffset + Math.abs(dist) / 4) {
+    return xpos2 - (3 * initialOffset) / 2 + rectWidth;
+  }
+  return 0;
+}
+
+function shiftTokens(shift, target) {
+  while ($("#token" + target).length) {
+    let curX = d3.select("#token" + target).attr("x");
+    console.log(curX);
+    d3.select("#token" + target).attr("x", parseInt(curX) + shift);
+    target++;
+  }
+}
+
+function redrawDeprels() {
+  d3.selectAll(".deprel").remove();
+  graph.links.forEach(function(l, i) {
+    addConnection(l.source, l.target, l.source + "-" + l.target, l.label);
+  });
+}
+
 // Add deprel to svg
 function addConnection(source, target, id, t) {
   let d = { source: $("#token" + source), target: $("#token" + target) };
-  graph.links.push({ source: source, target: target });
-  let mid = calculateMid(d);
+  graph.links.push({ source: source, target: target, label: t });
+
   let dir = calculateDirection(d);
 
   // Add text first to calculate its dimensions
@@ -247,16 +250,32 @@ function addConnection(source, target, id, t) {
     text = "⊲" + text;
   }
 
-  let pathGroup = svg.append("g").attr("id", "group" + id);
-
-  let textElement = pathGroup
+  svg
     .append("text")
     .attr("id", "text" + id)
     .text(text);
-
   let txt = $("#text" + id)[0];
   let rectWidth = txt.getBBox().width + 10;
   let rectHeight = txt.getBBox().height;
+  txt.remove();
+
+  let shift = needShift(d, rectWidth);
+  console.log("text too wide: ", shift);
+  if (shift == 0) {
+    drawDeprel(source, target, d, id, rectWidth, rectHeight, text);
+  } else {
+    shiftTokens(shift, target);
+    console.log(needShift(d, rectWidth));
+    redrawDeprels();
+  }
+}
+
+function drawDeprel(source, target, d, id, rectWidth, rectHeight, text) {
+  let mid = calculateMid(d);
+  let pathGroup = svg
+    .append("g")
+    .attr("id", "group" + id)
+    .attr("class", "deprel");
 
   function handleDeprelSelect() {
     d3.event.preventDefault();
@@ -279,7 +298,7 @@ function addConnection(source, target, id, t) {
     .style("stroke", "#BEBEBE")
     .style("stroke-width", "6px")
     .style("fill", "none")
-    .attr("d", calculateLeftCurve(d, rectWidth, rectHeight))
+    .attr("d", calculateLeftCurve(d, rectWidth))
     .attr("class", "deprel" + id)
     .on("contextmenu", handleDeprelSelect);
 
@@ -289,11 +308,14 @@ function addConnection(source, target, id, t) {
     .style("stroke-width", "6px")
     .style("fill", "none")
     .attr("marker-end", "url(#end)")
-    .attr("d", calculateRightCurve(d, rectWidth, rectHeight))
+    .attr("d", calculateRightCurve(d, rectWidth))
     .attr("class", "deprel" + id)
     .on("contextmenu", handleDeprelSelect);
 
-  textElement
+  pathGroup
+    .append("text")
+    .attr("id", "text" + id)
+    .text(text)
     .attr("x", 8)
     .attr("y", rectHeight / 2 + 4)
     .style("cursor", "pointer")
@@ -307,9 +329,6 @@ function addConnection(source, target, id, t) {
     )
     .on("click", function(d) {
       clicked = "label";
-      console.log(mid);
-      console.log(rectWidth);
-      console.log(rectHeight);
       $("#edit")
         .val("")
         .css("visibility", "visible")
