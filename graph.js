@@ -127,12 +127,14 @@ function createNodes() {
 
 // Calculate midpoint of point for text
 function calculateMid(d) {
+  let id1 = parseToken(d.source.attr("id"));
+  let id2 = parseToken(d.target.attr("id"));
   let xpos1 = parseInt(d.source.attr("x")) + 50;
   let ypos1 = parseInt(d.source.attr("y"));
   let xpos2 = parseInt(d.target.attr("x")) + 50;
   let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
   let dist = initialOffset - xpos2;
-  let height = ypos1 - Math.abs(dist) / 2;
+  let height = ypos1 - 65 * Math.abs(id1 - id2);
   return [(initialOffset + xpos2) / 2, height];
 }
 
@@ -144,13 +146,19 @@ function calculateDirection(d) {
   return Math.sign(dist);
 }
 
+function parseToken(id) {
+  return parseInt(id.substring(5));
+}
+
 function calculateLeftCurve(d, rectWidth) {
+  let id1 = parseToken(d.source.attr("id"));
+  let id2 = parseToken(d.target.attr("id"));
   let xpos1 = parseInt(d.source.attr("x")) + 50;
   let ypos1 = parseInt(d.source.attr("y"));
   let xpos2 = parseInt(d.target.attr("x")) + 50;
   let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
   let dist = initialOffset - xpos2;
-  let height = ypos1 - Math.abs(dist) / 2;
+  let height = ypos1 - 65 * Math.abs(id1 - id2);
   let rectLeft = (initialOffset + xpos2) / 2 - rectWidth / 2;
 
   let curveDist = Math.abs(dist) / 4;
@@ -177,13 +185,15 @@ function calculateLeftCurve(d, rectWidth) {
 }
 
 function calculateRightCurve(d, rectWidth) {
+  let id1 = parseToken(d.source.attr("id"));
+  let id2 = parseToken(d.target.attr("id"));
   let xpos1 = parseInt(d.source.attr("x")) + 50;
   let ypos1 = parseInt(d.source.attr("y"));
   let xpos2 = parseInt(d.target.attr("x")) + 50;
   let ypos2 = parseInt(d.target.attr("y"));
   let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
   let dist = initialOffset - xpos2;
-  let height = ypos1 - Math.abs(dist) / 2;
+  let height = ypos1 - 65 * Math.abs(id1 - id2);
   let rectRight = (initialOffset + xpos2) / 2 + rectWidth / 2;
   let curveDist = Math.abs(dist) / 4;
   let endpointx = Math.max(rectRight, xpos2 - curveDist);

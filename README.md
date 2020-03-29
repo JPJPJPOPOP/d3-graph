@@ -1,8 +1,16 @@
-To run:
+# Proof of Concept for UD Annotatrix editor using d3JS
+
+## Running:
+
 `python2.7 -m SimpleHTTPServer 8888 &`
 
-Rough concept of using d3js for graphing.
-Can create deprels.
+## Features:
 
-<img alt="graph" src="https://raw.githubusercontent.com/JPJPJPOPOP/d3-graph/master/images/graph.gif" width="600" height="423">
-<img alt="delete" src="https://raw.githubusercontent.com/JPJPJPOPOP/d3-graph/master/images/delete.gif" width="600" height="434">
+- Creating deprels
+  <img alt="add" src="https://raw.githubusercontent.com/JPJPJPOPOP/d3-graph/master/images/add.gif" width="600" height="423">
+- Deleting deprels
+  <img alt="delete" src="https://raw.githubusercontent.com/JPJPJPOPOP/d3-graph/master/images/delete.gif" width="600" height="434">
+- Editing deprel labels
+  <img alt="edit" src="https://raw.githubusercontent.com/JPJPJPOPOP/d3-graph/master/images/edit.gif" width="600" height="434">
+- Token shifting when labels doesn't fit
+  <img alt="shift" src="https://raw.githubusercontent.com/JPJPJPOPOP/d3-graph/master/images/shift.gif" width="600" height="434">
