@@ -158,14 +158,15 @@ function calculateLeftCurve(d, rectWidth) {
   let xpos1 = parseInt(d.source.attr("x")) + 50;
   let ypos1 = parseInt(d.source.attr("y"));
   let xpos2 = parseInt(d.target.attr("x")) + 50;
-  let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
+  let dir = calculateDirection(d);
+  let initialOffset = xpos1 - dir * 20;
   let dist = initialOffset - xpos2;
   let height = ypos1 - 65 * tokenDist(d);
-  let rectLeft = (initialOffset + xpos2) / 2 - rectWidth / 2;
+  let rectLeft = (initialOffset + xpos2) / 2 + (dir * rectWidth) / 2;
 
   let curveDist = 35 * tokenDist(d);
   console.log(curveDist);
-  let endpointx = Math.min(rectLeft, initialOffset + curveDist);
+  let endpointx = initialOffset - dir * curveDist;
   return (
     "M " +
     initialOffset +
@@ -191,12 +192,13 @@ function calculateRightCurve(d, rectWidth) {
   let ypos1 = parseInt(d.source.attr("y"));
   let xpos2 = parseInt(d.target.attr("x")) + 50;
   let ypos2 = parseInt(d.target.attr("y"));
-  let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
+  let dir = calculateDirection(d);
+  let initialOffset = xpos1 - dir * 20;
   let dist = initialOffset - xpos2;
   let height = ypos1 - 65 * tokenDist(d);
-  let rectRight = (initialOffset + xpos2) / 2 + rectWidth / 2;
+  let rectRight = (initialOffset + xpos2) / 2 - (dir * rectWidth) / 2;
   let curveDist = 35 * tokenDist(d); //Math.abs(dist) / 4;
-  let endpointx = Math.max(rectRight, xpos2 - curveDist);
+  let endpointx = xpos2 + dir * curveDist;
   return (
     "M " +
     rectRight +
@@ -220,11 +222,22 @@ function calculateRightCurve(d, rectWidth) {
 function needShift(d, rectWidth) {
   let xpos1 = parseInt(d.source.attr("x")) + 50;
   let xpos2 = parseInt(d.target.attr("x")) + 50;
-  let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
-  let dist = initialOffset - xpos2;
-  let rectLeft = (initialOffset + xpos2) / 2 - rectWidth / 2;
-  if (rectLeft < initialOffset + Math.abs(dist) / 4) {
-    return xpos2 - (3 * initialOffset) / 2 + rectWidth;
+  let dir = calculateDirection(d);
+  let initialOffset = xpos1 - dir * 20;
+  let rectLeft = (initialOffset + xpos2) / 2 + (dir * rectWidth) / 2;
+  console.log(initialOffset, rectLeft);
+  let curveDist = 35 * tokenDist(d);
+  let spacing = 20;
+  if (dir == -1) {
+    if (rectLeft < initialOffset + curveDist) {
+      return (
+        initialOffset + 2 * (curveDist - xpos2 / 2 + rectWidth / 2) + spacing
+      );
+    }
+  } else {
+    if (rectLeft > initialOffset - curveDist) {
+      return xpos2 + rectWidth + 2 * curveDist - initialOffset + spacing;
+    }
   }
   return 0;
 }
@@ -240,7 +253,9 @@ function shiftTokens(shift, target) {
 
 function redrawDeprels() {
   d3.selectAll(".deprel").remove();
-  graph.links.forEach(function(l, i) {
+  let newLinks = graph.links;
+  graph.links = [];
+  newLinks.forEach(function(l, i) {
     addConnection(l.source, l.target, l.source + "-" + l.target, l.label);
   });
 }
@@ -274,7 +289,11 @@ function addConnection(source, target, id, t) {
   if (shift == 0) {
     drawDeprel(source, target, d, id, rectWidth, rectHeight, text);
   } else {
-    shiftTokens(shift, target);
+    if (dir == -1) {
+      shiftTokens(shift, target);
+    } else {
+      shiftTokens(shift, source);
+    }
     console.log(needShift(d, rectWidth));
     redrawDeprels();
   }
