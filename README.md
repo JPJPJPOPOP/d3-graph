@@ -20,4 +20,4 @@
 
 - Token shifting when labels doesn't fit
 
-  <img alt="shift" src="https://raw.githubusercontent.com/JPJPJPOPOP/d3-graph/master/images/shift.gif" width="596" height="252">
+  <img alt="shift" src="https://raw.githubusercontent.com/JPJPJPOPOP/d3-graph/master/images/shift.gif" width="588" height="282">
