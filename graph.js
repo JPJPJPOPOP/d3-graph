@@ -125,16 +125,20 @@ function createNodes() {
     .attr("y", 500);
 }
 
-// Calculate midpoint of point for text
-function calculateMid(d) {
+function tokenDist(d) {
   let id1 = parseToken(d.source.attr("id"));
   let id2 = parseToken(d.target.attr("id"));
+  return Math.abs(id1 - id2);
+}
+
+// Calculate midpoint of point for text
+function calculateMid(d) {
   let xpos1 = parseInt(d.source.attr("x")) + 50;
   let ypos1 = parseInt(d.source.attr("y"));
   let xpos2 = parseInt(d.target.attr("x")) + 50;
   let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
   let dist = initialOffset - xpos2;
-  let height = ypos1 - 65 * Math.abs(id1 - id2);
+  let height = ypos1 - 65 * tokenDist(d);
   return [(initialOffset + xpos2) / 2, height];
 }
 
@@ -151,17 +155,15 @@ function parseToken(id) {
 }
 
 function calculateLeftCurve(d, rectWidth) {
-  let id1 = parseToken(d.source.attr("id"));
-  let id2 = parseToken(d.target.attr("id"));
   let xpos1 = parseInt(d.source.attr("x")) + 50;
   let ypos1 = parseInt(d.source.attr("y"));
   let xpos2 = parseInt(d.target.attr("x")) + 50;
   let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
   let dist = initialOffset - xpos2;
-  let height = ypos1 - 65 * Math.abs(id1 - id2);
+  let height = ypos1 - 65 * tokenDist(d);
   let rectLeft = (initialOffset + xpos2) / 2 - rectWidth / 2;
 
-  let curveDist = Math.abs(dist) / 4;
+  let curveDist = 35 * tokenDist(d);
   console.log(curveDist);
   let endpointx = Math.min(rectLeft, initialOffset + curveDist);
   return (
@@ -185,17 +187,15 @@ function calculateLeftCurve(d, rectWidth) {
 }
 
 function calculateRightCurve(d, rectWidth) {
-  let id1 = parseToken(d.source.attr("id"));
-  let id2 = parseToken(d.target.attr("id"));
   let xpos1 = parseInt(d.source.attr("x")) + 50;
   let ypos1 = parseInt(d.source.attr("y"));
   let xpos2 = parseInt(d.target.attr("x")) + 50;
   let ypos2 = parseInt(d.target.attr("y"));
   let initialOffset = xpos1 - Math.sign(xpos1 - xpos2) * 20;
   let dist = initialOffset - xpos2;
-  let height = ypos1 - 65 * Math.abs(id1 - id2);
+  let height = ypos1 - 65 * tokenDist(d);
   let rectRight = (initialOffset + xpos2) / 2 + rectWidth / 2;
-  let curveDist = Math.abs(dist) / 4;
+  let curveDist = 35 * tokenDist(d); //Math.abs(dist) / 4;
   let endpointx = Math.max(rectRight, xpos2 - curveDist);
   return (
     "M " +
