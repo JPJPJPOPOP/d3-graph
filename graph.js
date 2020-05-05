@@ -1,11 +1,11 @@
 let graph = {
   nodes: [
-    { id: 1, text: "I" },
-    { id: 2, text: "enjoy" },
-    { id: 3, text: "eating" },
-    { id: 4, text: "pie" }
+    { id: 1, form: "I" },
+    { id: 2, form: "enjoy" },
+    { id: 3, form: "eating" },
+    { id: 4, form: "pie" },
   ],
-  links: []
+  links: [],
 };
 
 let connecting = null;
@@ -16,17 +16,27 @@ let clicked = null;
 let svg = d3
   .select("body")
   .append("svg")
-  .attr("width", 2000)
-  .attr("height", 800)
+  .attr("width", "100%")
+  .attr("height", "100%")
   .style("background", "white")
   .style("font-family", "Arial")
-  .style("font-size", "20");
+  .style("font-size", "20")
+  .call(
+    d3
+      .zoom()
+      .scaleExtent([0.5, 5])
+      .on("zoom", function () {
+        svg.attr("transform", d3.event.transform);
+      })
+  )
+  .append("g");
 
-// Detect clicks on svg
-svg.on("click", function() {
+// Detect clicks on svg and unselect everything except what was just clicked.
+svg.on("click", function (e) {
   console.log("svg detect click " + clicked);
   if (clicked != "deprel" && selected != null) {
     d3.selectAll(".deprel" + selected).style("stroke", "#BEBEBE");
+    d3.selectAll("#depreltail" + selected).attr("marker-end", "url(#end)");
     selected = null;
   }
   if (clicked != "token" && connecting != null) {
@@ -39,7 +49,7 @@ svg.on("click", function() {
   clicked = null;
 });
 
-$(window).keydown(function(e) {
+$(window).keydown(function (e) {
   console.log(e);
   // Detect delete for deleting deprels
   if (e != null && e.keyCode == 8) {
@@ -64,7 +74,7 @@ function deleteDeprel(id) {
   });
 }
 
-// Ending arrowhead
+// Ending arrowheads
 let markerDef = svg.append("defs");
 markerDef
   .append("marker")
@@ -72,14 +82,25 @@ markerDef
   .attr("viewBox", "0 -5 10 10")
   .attr("refX", "2")
   .attr("refY", "2")
-  .attr("markerUnits", "userSpaceOnUse")
-  .attr("markerWidth", "110")
-  .attr("markerHeight", "110")
+  .attr("markerWidth", "20")
+  .attr("markerHeight", "20")
   .attr("orient", "auto")
   .style("fill", "#494949")
   .append("path")
   .attr("d", "M 1 1 L 3 2 L 1 3 Z");
 
+markerDef
+  .append("marker")
+  .attr("id", "selectedend")
+  .attr("viewBox", "0 -5 10 10")
+  .attr("refX", "2")
+  .attr("refY", "2")
+  .attr("markerWidth", "20")
+  .attr("markerHeight", "20")
+  .attr("orient", "auto")
+  .style("fill", "#D856FC")
+  .append("path")
+  .attr("d", "M 1 1 L 3 2 L 1 3 Z");
 // Initialize tokens
 function createNodes() {
   var nodes = svg
@@ -90,13 +111,13 @@ function createNodes() {
     .attr("class", "cell")
     .attr("rx", 10)
     .attr("ry", 10)
-    .attr("id", function(d) {
+    .attr("id", function (d) {
       return "token" + d.id;
     })
     .style("fill", "#7FA1FF")
     .style("stroke", "black")
-    .style("stroke-width", "1px")
-    .on("click", function(d) {
+    .style("stroke-width", "2px")
+    .on("click", function (d) {
       if (connecting != null) {
         d3.select("#token" + connecting).style("fill", "#7FA1FF");
         if (connecting == d.id) {
@@ -119,10 +140,10 @@ function createNodes() {
     });
   let spacing = 1;
   var nodesAttr = nodes
-    .attr("x", function(d) {
+    .attr("x", function (d) {
       return spacing++ * 150;
     })
-    .attr("y", 500);
+    .attr("y", 400);
 }
 
 function tokenDist(d) {
@@ -245,7 +266,6 @@ function needShift(d, rectWidth) {
 function shiftTokens(shift, target) {
   while ($("#token" + target).length) {
     let curX = d3.select("#token" + target).attr("x");
-    console.log(curX);
     d3.select("#token" + target).attr("x", parseInt(curX) + shift);
     target++;
   }
@@ -255,7 +275,7 @@ function redrawDeprels() {
   d3.selectAll(".deprel").remove();
   let newLinks = graph.links;
   graph.links = [];
-  newLinks.forEach(function(l, i) {
+  newLinks.forEach(function (l, i) {
     addConnection(l.source, l.target, l.source + "-" + l.target, l.label);
   });
 }
@@ -280,14 +300,14 @@ function addConnection(source, target, id, t) {
     .attr("id", "text" + id)
     .text(text);
   let txt = $("#text" + id)[0];
-  let rectWidth = txt.getBBox().width + 10;
-  let rectHeight = txt.getBBox().height;
+  let rectWidth = txt.getBoundingClientRect().width + 10;
+  let rectHeight = txt.getBoundingClientRect().height;
   txt.remove();
 
   let shift = needShift(d, rectWidth);
   console.log("text too wide: ", shift);
   if (shift == 0) {
-    drawDeprel(source, target, d, id, rectWidth, rectHeight, text);
+    drawDeprel(source, target, d, id, rectWidth, rectHeight, text, dir);
   } else {
     if (dir == -1) {
       shiftTokens(shift, target);
@@ -299,7 +319,7 @@ function addConnection(source, target, id, t) {
   }
 }
 
-function drawDeprel(source, target, d, id, rectWidth, rectHeight, text) {
+function drawDeprel(source, target, d, id, rectWidth, rectHeight, text, dir) {
   let mid = calculateMid(d);
   let pathGroup = svg
     .append("g")
@@ -311,6 +331,7 @@ function drawDeprel(source, target, d, id, rectWidth, rectHeight, text) {
     console.log("rightclick");
     if (selected != null) {
       d3.selectAll(".deprel" + selected).style("stroke", "#BEBEBE");
+      d3.selectAll("#depreltail" + selected).attr("marker-end", "url(#end)");
     }
     if (selected == id) {
       selected = null;
@@ -318,6 +339,10 @@ function drawDeprel(source, target, d, id, rectWidth, rectHeight, text) {
     }
     selected = id;
     d3.selectAll(".deprel" + selected).style("stroke", "#D856FC");
+    d3.selectAll("#depreltail" + selected).attr(
+      "marker-end",
+      "url(#selectedend)"
+    );
     clicked = "deprel";
     svg.on("click")();
   }
@@ -339,13 +364,14 @@ function drawDeprel(source, target, d, id, rectWidth, rectHeight, text) {
     .attr("marker-end", "url(#end)")
     .attr("d", calculateRightCurve(d, rectWidth))
     .attr("class", "deprel" + id)
+    .attr("id", "depreltail" + id)
     .on("contextmenu", handleDeprelSelect);
 
   pathGroup
     .append("text")
     .attr("id", "text" + id)
     .text(text)
-    .attr("x", 8)
+    .attr("x", dir < 0 ? 8 : 5) // left margin of embedded text
     .attr("y", rectHeight / 2 + 4)
     .style("cursor", "pointer")
     .attr(
@@ -356,24 +382,24 @@ function drawDeprel(source, target, d, id, rectWidth, rectHeight, text) {
         (mid[1] - rectHeight / 2) +
         ")"
     )
-    .on("click", function(d) {
+    .on("click", function (d) {
       clicked = "label";
       $("#edit")
         .val("")
         .css("visibility", "visible")
         .focus()
-        .css("left", mid[0] - 40)
+        .css("left", mid[0] - 50)
         .css("top", mid[1] - 25 + rectHeight / 2)
         .off("change") //remove previous change handler
-        .on("change", function() {
+        .on("change", function () {
           deleteDeprel(id);
           addConnection(source, target, id, this.value);
-          $("#edit")
-            .css("visibility", "hidden")
-            .blur();
+          $("#edit").css("visibility", "hidden").blur();
           console.log(id);
         });
     });
 }
+
+function changeDeprelColor(id, color) {}
 
 createNodes();
