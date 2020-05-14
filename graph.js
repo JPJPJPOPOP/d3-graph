@@ -1,9 +1,11 @@
 let graph = {
   nodes: [
-    { id: 1, form: "I" },
-    { id: 2, form: "enjoy" },
-    { id: 3, form: "eating" },
-    { id: 4, form: "pie" },
+    { id: 1, form: "Hi" },
+    { id: 2, form: "," },
+    { id: 3, form: "my" },
+    { id: 4, form: "name" },
+    { id: 5, form: "is" },
+    { id: 6, form: "Joe" },
   ],
   links: [],
 };
@@ -26,10 +28,14 @@ let svg = d3
       .zoom()
       .scaleExtent([0.5, 5])
       .on("zoom", function () {
-        svg.attr("transform", d3.event.transform);
+        if ($("#edit").css("visibility") == "hidden") {
+          g.attr("transform", d3.event.transform);
+        }
       })
   )
-  .append("g");
+  .on("dblclick.zoom", null);
+
+let g = svg.append("g");
 
 // Detect clicks on svg and unselect everything except what was just clicked.
 svg.on("click", function (e) {
@@ -75,7 +81,7 @@ function deleteDeprel(id) {
 }
 
 // Ending arrowheads
-let markerDef = svg.append("defs");
+let markerDef = g.append("defs");
 markerDef
   .append("marker")
   .attr("id", "end")
@@ -103,7 +109,7 @@ markerDef
   .attr("d", "M 1 1 L 3 2 L 1 3 Z");
 // Initialize tokens
 function createNodes() {
-  var nodes = svg
+  var nodes = g
     .selectAll("rect")
     .data(graph.nodes)
     .enter()
@@ -294,14 +300,13 @@ function addConnection(source, target, id, t) {
   } else {
     text = "⊲" + text;
   }
-
-  svg
-    .append("text")
+  var transform = d3.zoomTransform(g.node());
+  g.append("text")
     .attr("id", "text" + id)
     .text(text);
   let txt = $("#text" + id)[0];
-  let rectWidth = txt.getBoundingClientRect().width + 10;
-  let rectHeight = txt.getBoundingClientRect().height;
+  let rectWidth = txt.getBoundingClientRect().width / transform.k + 10;
+  let rectHeight = txt.getBoundingClientRect().height / transform.k;
   txt.remove();
 
   let shift = needShift(d, rectWidth);
@@ -321,7 +326,7 @@ function addConnection(source, target, id, t) {
 
 function drawDeprel(source, target, d, id, rectWidth, rectHeight, text, dir) {
   let mid = calculateMid(d);
-  let pathGroup = svg
+  let pathGroup = g
     .append("g")
     .attr("id", "group" + id)
     .attr("class", "deprel");
@@ -384,12 +389,17 @@ function drawDeprel(source, target, d, id, rectWidth, rectHeight, text, dir) {
     )
     .on("click", function (d) {
       clicked = "label";
+      var t = d3.zoomTransform(g.node());
+      var editWidth = Math.max(rectWidth * t.k, 100);
+      var editHeight = Math.max(rectHeight * t.k, 15);
       $("#edit")
         .val("")
         .css("visibility", "visible")
         .focus()
-        .css("left", mid[0] - 50)
-        .css("top", mid[1] - 25 + rectHeight / 2)
+        .css("width", editWidth)
+        .css("height", editHeight)
+        .css("left", mid[0] * t.k + t.x - editWidth / 2)
+        .css("top", mid[1] * t.k + t.y - editHeight / 2)
         .off("change") //remove previous change handler
         .on("change", function () {
           deleteDeprel(id);

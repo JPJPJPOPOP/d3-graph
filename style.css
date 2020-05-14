@@ -8,8 +8,6 @@ body {
 }
 
 #edit {
-  height: 50px;
-  width: 100px;
   position: absolute;
   visibility: hidden;
 }

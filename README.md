@@ -2,7 +2,7 @@
 
 ## Running:
 
-`python2.7 -m SimpleHTTPServer 8888 &`
+`python -m http.server 8888`
 
 ## Features:
 
